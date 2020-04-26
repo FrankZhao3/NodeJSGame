@@ -27,11 +27,11 @@ console.log(`Server listening on port ${port}`);
 const io = socketio(server);
 
 // Listen for socket.io connections
-io.on('connection', socket => {
-  console.log('Player connected!', socket.id);
-  //socket.on('disconnect', onDisconnect);
-});
 
-io.on('chat message', (msg)=>{
-  console.log("received message" + msg);
+io.on('connection', (socket) => {
+  console.log('Player connected!', socket.id);
+  socket.on('chat message', (msg) => {
+    io.emit('chat message', "some msg");
+    console.log('msg: ' + msg);
+  })
 });
