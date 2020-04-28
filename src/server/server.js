@@ -33,5 +33,6 @@ io.on('connection', (socket) => {
   socket.on('chat message', (msg) => {
     io.emit('chat message', "some msg");
     console.log('msg: ' + msg);
-  })
+  });
+  io.emit('connect player', socket.id);
 });

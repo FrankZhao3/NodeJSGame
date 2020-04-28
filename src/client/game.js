@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import dudePic from '../assets/dude.png';
 import landPic from '../assets/light_grass.png';
+import Player from './player.js';
+import io from 'socket.io-client'
+
 // Creating the game
 
 //draw canvas
@@ -19,17 +22,23 @@ var config = {
     }
 };
 
+var socket;
 var game = new Phaser.Game(config)
 var currentSpeed = 5;
 var land;
 var player;
 var cursors;
+var playerLst = [];
+
 function preload() {
     this.load.spritesheet('dude', dudePic, {frameWidth:64, frameHeight:64});
     this.load.image('earth', landPic);
-}
+};
 
 function create() {
+    // init socket
+    socket = io(`ws://${window.location.host}`);
+
     // player settings
   // Our tiled scrolling background
     land = this.add.tileSprite(0, 0, 1500, 1500, 'earth');
@@ -56,7 +65,7 @@ function create() {
         right: 'right'
     }); 
     // event handlers
-    //setEventHandlers();
+    setEventHandlers();
 
 };
 
@@ -69,7 +78,6 @@ function update() {
         player.x += currentSpeed;
         player.angle = 0;
     } else if (cursors.up.isDown) {
-        // The speed we'll travel at
         player.y -= currentSpeed;
         player.angle = -90;
     } else if(cursors.down.isDown){
@@ -89,5 +97,70 @@ function update() {
             player.anims.pause();
         }
     }
+
+    socket.emit('move player', { x: player.x, y: player.y, angle: player.angle })
+
 };
 
+function setEventHandlers () {
+    // Socket connection successful
+    socket.on('connect player', (data)=>{
+        console.log('Player ' + data + ' Connected to socket server');
+        socket.emit('new player' + data, { x: player.x, y: player.y, angle: player.angle });
+    });
+  
+    // Socket disconnection
+    socket.on('disconnect player', (data)=>{
+        console.log('Player' + data.id + 'Disconnected from socket server');       
+    });
+  
+    // New player message received
+    socket.on('new player', (data)=>{
+        console.log('New player connected:', data.id);
+        playerLst.push(new Player(data.id, data.x, data.y, data.angle));
+    });
+  
+    // Player move message received
+    socket.on('move player', (data)=>{
+        console.log('Move player:', data.id);
+        movePlayer = findPlayerInPlayerLst(data.id);
+        if(!movePlayer) {
+            console.log('player not found');
+            return;
+        }
+        movePlayer.x = data.x;
+        movePlayer.y = data.y;
+        movePlayerangle = data.angle;
+    })
+  
+    // Player removed message received
+    socket.on('remove player', (data)=>{
+        console.log('Remove player:', data.id);
+        removedPlayer = removePlayerInPlayerLst(data.id);
+        if(!removedPlayer) {
+            console.log('player not found');
+            return;
+        }
+    });
+};
+
+function findPlayerInPlayerLst(find_id) {
+    var i;
+    for(i = 0; i < playerLst.length; i++) {
+        if(player[i].id == find_id) {
+            return player;
+        }
+    }
+    return false
+};
+
+function removePlayerInPlayerLst(find_id) {
+    var i;
+    for(i = 0; i < playerLst.length; i++) {
+        if(player[i].id == find_id) {
+             playerLst.splice(i, 1);
+             return true;
+        }
+    }
+    return false
+};
