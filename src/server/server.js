@@ -26,13 +26,61 @@ console.log(`Server listening on port ${port}`);
 // Setup socket.io
 const io = socketio(server);
 
-// Listen for socket.io connections
 
+var playerPosLst = [];
+
+// Listen for socket.io connections
 io.on('connection', (socket) => {
   console.log('Player connected!', socket.id);
+  console.log(playerPosLst);
+  io.to(socket.id).emit('connect player', {id: socket.id});
+  playerPosLst.forEach(elem => {
+    io.to(socket.id).emit('load players', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle}); //private reply
+  });
+
   socket.on('chat message', (msg) => {
     io.emit('chat message', "some msg");
     console.log('msg: ' + msg);
   });
-  io.emit('connect player', socket.id);
+
+  socket.on('boardcast player', (data) => {
+    console.log('boardcast player: ' + data.id);
+    console.log(data.x + " " + data.y + " " + data.angle);
+    playerPosLst.push({id: data.id, x:data.x, y:data.y, angle:data.angle});
+    socket.broadcast.emit('new player', data);
+  });
+
+  socket.on('move player', (data)=>{
+    console.log('move player', data.id);
+    updatePlayerPosLst(data);
+    socket.broadcast.emit('move player', data); // boardcast to other players to update location
+  });
+
+  socket.on('disconnect', ()=>{
+    console.log('remove player', socket.id);
+    removePlayerPosLst(socket.id);
+    socket.broadcast.emit('disconnect player', {id: socket.id});
+  })
+
 });
+
+
+function updatePlayerPosLst(data) {
+  var i;
+  for(i = 0; i < playerPosLst.length; i++) {
+      if(playerPosLst[i].id == data.id) {
+          playerPosLst[i].x = data.x;
+          playerPosLst[i].y = data.y;
+          playerPosLst[i].angle = data.angle;
+      }
+  }
+};
+
+function removePlayerPosLst(removeId) {
+  var i;
+  for(i = 0; i < playerPosLst.length; i++) {
+      if(playerPosLst[i].id == removeId) {
+        playerPosLst.splice(i, 1);
+      }
+  }
+}
