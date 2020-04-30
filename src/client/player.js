@@ -6,6 +6,8 @@ export default class Player {
         this.y = y;
         this.angle = angle;
         this.sprite = game.add.sprite(x, y, 'dude' + id);
+        this.game.physics.world.enable(this.sprite);
+        this.sprite.body.setBounce(1, 1).setCollideWorldBounds(true);
         this.sprite.anims.load('walk');
     }
 }

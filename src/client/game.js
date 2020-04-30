@@ -9,9 +9,9 @@ import io from 'socket.io-client'
 //draw canvas
 var config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    backgroundColor: "#ffffff",
+    width: 1000,
+    height: 1000,
+    backgroundColor: "#000000",
     physics: {
         default: 'arcade'
     },
@@ -52,8 +52,10 @@ function create() {
     var anim = this.anims.create(config);
 
   // Our tiled scrolling background
-    land = this.add.tileSprite(0, 0, 1500, 1500, 'earth');
+    land = this.add.tileSprite(0, 0, 2000, 2000, 'earth');
     land.fixedToCamera = true;
+    this.physics.world.setBounds(0, 0, 950, 950);
+    // add a player to the game
     this_player = new Player(this, null, 50, 50, 0);
     // add keys
     cursors = this.input.keyboard.addKeys({
@@ -94,6 +96,7 @@ function update() {
         if (!this_player.sprite.anims.isPaused)
         {
             this_player.sprite.anims.pause();
+            socket.emit('stop player', {id: this_player.id, x: this_player.sprite.x, y: this_player.sprite.y, angle: this_player.sprite.angle });
         }
     }
 };
@@ -142,7 +145,16 @@ function setEventHandlers () {
         movePlayer.sprite.x = data.x;
         movePlayer.sprite.y = data.y;
         movePlayer.sprite.angle = data.angle;
-    })
+
+        if(movePlayer.sprite.anims.isPaused)
+            movePlayer.sprite.anims.play('walk');
+    });
+
+    socket.on('stop player', (data)=>{
+        var findPlayer = findPlayerInPlayerLst(data.id);
+        if(!findPlayer.sprite.anims.isPaused)
+            findPlayer.sprite.anims.pause();
+    });
 };
 
 function findPlayerInPlayerLst(find_id) {

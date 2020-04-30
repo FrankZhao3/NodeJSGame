@@ -56,6 +56,11 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('move player', data); // boardcast to other players to update location
   });
 
+  socket.on('stop player', (data)=>{
+    console.log('stop player', data.id);
+    socket.broadcast.emit('stop player', data);
+  });
+  
   socket.on('disconnect', ()=>{
     console.log('remove player', socket.id);
     removePlayerPosLst(socket.id);
