@@ -5,9 +5,9 @@ export default class Player {
         this.x = x;
         this.y = y;
         this.angle = angle;
-        this.sprite = game.add.sprite(x, y, 'dude' + id);
+        this.sprite = game.physics.add.sprite(x, y, 'dude' + id);
         this.game.physics.world.enable(this.sprite);
-        this.sprite.body.setBounce(1, 1).setCollideWorldBounds(true);
+        this.sprite.body.setBounce(0.2).setCollideWorldBounds(true);
         this.sprite.anims.load('walk');
     }
 }

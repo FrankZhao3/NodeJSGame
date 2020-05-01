@@ -24,7 +24,7 @@ var config = {
 
 var socket;
 var game = new Phaser.Game(config)
-var currentSpeed = 5;
+var currentSpeed = 100;
 var land;
 var cursors;
 var playerLst = [];
@@ -41,7 +41,7 @@ function create() {
     socket = io(`ws://${window.location.host}`);
 
     // walk anim
-    var config = {
+    var walkAnim = {
         key: 'walk',
         frames: this.anims.generateFrameNumbers('dude'),
         frameRate: 4,
@@ -49,7 +49,15 @@ function create() {
         repeat: -1
     };
 
-    var anim = this.anims.create(config);
+    var stopAnim = {
+        key: 'walk',
+        frames: this.anims.generateFrameNumbers('dude', {start: 3, end:4}),
+        frameRate: 4,
+        yoyo: true,
+        repeat: -1
+    }
+    this.anims.create(walkAnim);
+    this.anims.create(stopAnim);
 
   // Our tiled scrolling background
     land = this.add.tileSprite(0, 0, 2000, 2000, 'earth');
@@ -70,18 +78,21 @@ function create() {
 };
 
 function update() {
+    // set collide
+
+    this_player.sprite.setVelocity(0);
     var pressed = true;
     if (cursors.left.isDown) {
-        this_player.sprite.x -= currentSpeed
+        this_player.sprite.setVelocityX(-currentSpeed);
         this_player.sprite.angle = 180;
     } else if (cursors.right.isDown) {
-        this_player.sprite.x += currentSpeed;
+        this_player.sprite.setVelocityX(currentSpeed);
         this_player.sprite.angle = 0;
     } else if (cursors.up.isDown) {
-        this_player.sprite.y -= currentSpeed;
+        this_player.sprite.setVelocityY(-currentSpeed);
         this_player.sprite.angle = -90;
     } else if(cursors.down.isDown){
-        this_player.sprite.y += currentSpeed;
+        this_player.sprite.setVelocityY(currentSpeed);
         this_player.sprite.angle = 90;
     } else {
         pressed = false;
@@ -113,14 +124,16 @@ function setEventHandlers () {
     
     // Loading other players
     socket.on('load players', (data)=>{
-        playerLst.push(new Player(this_player.game, data.id, data.x, data.y, data.angle));
+        var aNewPlayer = new Player(this_player.game, data.id, data.x, data.y, data.angle);
+        playerLst.push();
+        this_player.game.physics.add.collider(this_player.sprite, aNewPlayer.sprite);
     });
     
     // Socket disconnection
     socket.on('disconnect player', (data)=>{
         console.log('Remove player:', data.id);
-        removedPlayer = removePlayerInPlayerLst(data.id);
-        if(!removedPlayer) {
+        var removedPlayer = removePlayerInPlayerLst(data.id);
+        if(removedPlayer == null) {
             console.log('player not found');
         }
     });
@@ -152,7 +165,7 @@ function setEventHandlers () {
 
     socket.on('stop player', (data)=>{
         var findPlayer = findPlayerInPlayerLst(data.id);
-        if(!findPlayer.sprite.anims.isPaused)
+        if(findPlayer != null && findPlayer.sprite != null && !findPlayer.sprite.anims.isPaused)
             findPlayer.sprite.anims.pause();
     });
 };
