@@ -1,7 +1,9 @@
 import Phaser from "phaser";
 import dudePic from '../assets/dude.png';
 import landPic from '../assets/light_grass.png';
-import Player from './player.js';
+import chairPic from '../assets/chair.png';
+
+import {Player, Chair} from './player.js';
 import io from 'socket.io-client'
 
 // Creating the game
@@ -29,11 +31,13 @@ var land;
 var cursors;
 var playerLst = [];
 var this_player;
+var this_chair;
 const self = this;
 
 function preload() {
     this.load.spritesheet('dude', dudePic, {frameWidth:64, frameHeight:64});
     this.load.image('earth', landPic);
+    this.load.image('chair', chairPic);
 };
 
 function create() {
@@ -64,7 +68,15 @@ function create() {
     land.fixedToCamera = true;
     this.physics.world.setBounds(0, 0, 950, 950);
     // add a player to the game
-    this_player = new Player(this, null, 50, 50, 0);
+    var startX = Math.round(Math.random() * (1000) - 500);
+    var startY = Math.round(Math.random() * (1000) - 500);
+    this_player = new Player(this, null, startX, startY, 0);
+
+    // add chair
+    this_chair = new Chair(this, 500, 500, 0);
+    this.physics.add.collider(this_player.sprite, this_chair.sprite, ()=> {
+        this_chair.sprite.destroy();
+    });
     // add keys
     cursors = this.input.keyboard.addKeys({
         up: 'up',
@@ -79,7 +91,6 @@ function create() {
 
 function update() {
     // set collide
-
     this_player.sprite.setVelocity(0);
     var pressed = true;
     if (cursors.left.isDown) {
@@ -125,8 +136,7 @@ function setEventHandlers () {
     // Loading other players
     socket.on('load players', (data)=>{
         var aNewPlayer = new Player(this_player.game, data.id, data.x, data.y, data.angle);
-        playerLst.push();
-        this_player.game.physics.add.collider(this_player.sprite, aNewPlayer.sprite);
+        playerLst.push(aNewPlayer);
     });
     
     // Socket disconnection
@@ -143,7 +153,8 @@ function setEventHandlers () {
         console.log('New player connected:', data.id);
         // adding other player
         if(data.id != this_player.id) {
-            playerLst.push(new Player(this_player.game, data.id, data.x, data.y, data.angle));
+            var newPlayer = new Player(this_player.game, data.id, data.x, data.y, data.angle);
+            playerLst.push(newPlayer);
         }
     });
   
