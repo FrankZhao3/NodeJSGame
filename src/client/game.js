@@ -68,10 +68,12 @@ function create() {
     land.fixedToCamera = true;
     this.physics.world.setBounds(0, 0, 950, 950);
     // add a player to the game
-    var startX = Math.round(Math.random() * (1000) - 500);
-    var startY = Math.round(Math.random() * (1000) - 500);
+    var startX = Math.round(Math.random() * (200) + 50);
+    var startY = Math.round(Math.random() * (200) + 50);
     this_player = new Player(this, null, startX, startY, 0);
-
+    var textX = Math.floor(this_player.sprite.x - this_player.sprite.width / 2);
+    var textY = Math.floor(this_player.sprite.y - this_player.sprite.height / 2);
+    this.add.text(textX, textY, 'dude');
     // add keys
     cursors = this.input.keyboard.addKeys({
         up: 'up',
