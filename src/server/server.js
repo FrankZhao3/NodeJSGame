@@ -25,23 +25,35 @@ console.log(`Server listening on port ${port}`);
 
 // Setup socket.io
 const io = socketio(server);
-
+const initChairNum = 15;
 
 var playerPosLst = [];
+var chairPosLst = [];
 
 // Listen for socket.io connections
 io.on('connection', (socket) => {
   console.log('Player connected!', socket.id);
-  console.log(playerPosLst);
   io.to(socket.id).emit('connect player', {id: socket.id});
   playerPosLst.forEach(elem => {
     io.to(socket.id).emit('load players', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle}); //private reply
   });
+  
+  // init chair pos when the first player join in the game
+  if(chairPosLst.length == 0) {
+    // add chairs
+    for(var i = 0; i < initChairNum; i++) {
+      chairPosLst.push({id : i, x: Math.random() * 500 + 200, y: Math.random() * 500 + 200, angle: 0});  
+    }
+  }
 
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', "some msg");
-    console.log('msg: ' + msg);
+  chairPosLst.forEach(elem=> {
+    io.to(socket.id).emit('load chairs', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle});
   });
+
+  // socket.on('chat message', (msg) => {
+  //   io.emit('chat message', "some msg");
+  //   console.log('msg: ' + msg);
+  // });
 
   socket.on('boardcast player', (data) => {
     console.log('boardcast player: ' + data.id);
@@ -67,6 +79,11 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('disconnect player', {id: socket.id});
   })
 
+  socket.on('remove chair', (data)=>{
+    console.log('remove chair ' + data.id);
+    removeChairFromChairPosLst(data.id);
+    io.emit('remove chair', {id: data.id});
+  }); 
 });
 
 
@@ -87,5 +104,13 @@ function removePlayerPosLst(removeId) {
       if(playerPosLst[i].id == removeId) {
         playerPosLst.splice(i, 1);
       }
+  }
+}
+
+function removeChairFromChairPosLst(chairId) {
+  for(var i = 0; i < chairPosLst.length; i++) {
+    if(chairPosLst[i].id == chairId) {
+      chairPosLst.splice(i, 1);
+    }
   }
 }

@@ -26,12 +26,12 @@ var config = {
 
 var socket;
 var game = new Phaser.Game(config)
-var currentSpeed = 100;
+var currentSpeed = 200;
 var land;
 var cursors;
 var playerLst = [];
+var chairLst = [];
 var this_player;
-var this_chair;
 const self = this;
 
 function preload() {
@@ -72,11 +72,6 @@ function create() {
     var startY = Math.round(Math.random() * (1000) - 500);
     this_player = new Player(this, null, startX, startY, 0);
 
-    // add chair
-    this_chair = new Chair(this, 500, 500, 0);
-    this.physics.add.collider(this_player.sprite, this_chair.sprite, ()=> {
-        this_chair.sprite.destroy();
-    });
     // add keys
     cursors = this.input.keyboard.addKeys({
         up: 'up',
@@ -139,11 +134,28 @@ function setEventHandlers () {
         playerLst.push(aNewPlayer);
     });
     
+    socket.on('load chairs', (data)=>{
+        var newChair = new Chair(this_player.game, data.id, data.x, data.y, data.angle);
+        chairLst.push(newChair);
+        // add collider for your player and all chairs
+        this_player.game.physics.add.collider(this_player.sprite, newChair.sprite, (player, chair)=> {
+            console.log("Grab a chair: " + chair.id);
+            socket.emit('remove chair', {id: chair.id});
+        });
+    });
+
+    socket.on('remove chair', (data) => {
+        var chair = removeChairInChairLst(data.id);
+        if(!chair) {
+            console.log('chair not found');
+        }
+    });
+
     // Socket disconnection
     socket.on('disconnect player', (data)=>{
         console.log('Remove player:', data.id);
         var removedPlayer = removePlayerInPlayerLst(data.id);
-        if(removedPlayer == null) {
+        if(!removedPlayer) {
             console.log('player not found');
         }
     });
@@ -182,23 +194,41 @@ function setEventHandlers () {
 };
 
 function findPlayerInPlayerLst(find_id) {
-    var i;
-    for(i = 0; i < playerLst.length; i++) {
+    for(var i = 0; i < playerLst.length; i++) {
         if(playerLst[i].id == find_id) {
             return playerLst[i];
         }
     }
-    return false
+    return null;
 };
 
 function removePlayerInPlayerLst(find_id) {
-    var i;
-    for(i = 0; i < playerLst.length; i++) {
+    for(var i = 0; i < playerLst.length; i++) {
         if(playerLst[i].id == find_id) {
             playerLst[i].sprite.destroy();
             playerLst.splice(i, 1);
             return true;
         }
     }
-    return false
+    return null;
 };
+
+function findChairInChairLst(find_id) {
+    for(var i = 0; i < chairLst.length; i++) {
+        if(chairLst[i].id == find_id) {
+            return chairLst[i];
+        }
+    }
+    return null;
+}
+
+function removeChairInChairLst(find_id) {
+    for(var i = 0; i < chairLst.length; i++) {
+        if(chairLst[i].sprite.id == find_id) {
+            chairLst[i].sprite.destroy();
+            chairLst.splice(i, 1);
+            return true;
+        }
+    }
+    return null;
+}
