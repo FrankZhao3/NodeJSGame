@@ -24,15 +24,22 @@ var config = {
     }
 };
 
-var socket;
-var game = new Phaser.Game(config)
 var currentSpeed = 200;
 var land;
 var cursors;
 var playerLst = [];
 var chairLst = [];
 var this_player;
-const self = this;
+var playerName;
+var game;
+var socket;
+
+export const startGame= (username)=>{
+    console.log('initializing game for ' + username);
+    game = new Phaser.Game(config);
+    playerName = username;
+};
+
 
 function preload() {
     this.load.spritesheet('dude', dudePic, {frameWidth:64, frameHeight:64});
@@ -41,9 +48,8 @@ function preload() {
 };
 
 function create() {
-    // init socket
+    // set up socket
     socket = io(`ws://${window.location.host}`);
-
     // walk anim
     var walkAnim = {
         key: 'walk',
@@ -73,7 +79,7 @@ function create() {
     this_player = new Player(this, null, startX, startY, 0);
     var textX = Math.floor(this_player.sprite.x - this_player.sprite.width / 2);
     var textY = Math.floor(this_player.sprite.y - this_player.sprite.height / 2);
-    this.add.text(textX, textY, 'dude');
+    playerName = this.add.text(textX, textY, playerName);
     // add keys
     cursors = this.input.keyboard.addKeys({
         up: 'up',
@@ -105,7 +111,10 @@ function update() {
     } else {
         pressed = false;
     }
-    
+    // move name
+    playerName.setX(this_player.sprite.x - this_player.sprite.width / 2);
+    playerName.setY(this_player.sprite.y - this_player.sprite.height);
+
     if(pressed)
     {
         if(this_player.sprite.anims.isPaused)

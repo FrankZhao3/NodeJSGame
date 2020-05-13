@@ -1,15 +1,16 @@
-import './game.js'
+import {startGame} from './game.js'
 
 const playButton = document.getElementById('play-button');
 const usernameInput = document.getElementById('username-input');
+// init socket
 
-// playButton.onclick = () => {
-//   // Play!
-//   console.log("Clicked!");
-//   socket.emit('chat message', "msg");
-//   console.log(usernameInput.value);
-// };
+playButton.onclick = () => {
+  // Play!
+  console.log("Username: ", usernameInput.value);
+  console.log(usernameInput.value);
+  // notify server to start the game
 
-// socket.on('chat message', (msg) => {
-//   console.log('Connected to server!' + msg);
-// });
+  startGame(usernameInput.value);
+
+};
+
