@@ -3,7 +3,7 @@ import dudePic from '../assets/dude.png';
 import landPic from '../assets/light_grass.png';
 import chairPic from '../assets/chair.png';
 
-import {Player, Chair} from './player.js';
+import {Player, Chair} from './gameObject.js';
 import io from 'socket.io-client'
 
 // Creating the game
@@ -111,20 +111,21 @@ function update() {
     } else {
         pressed = false;
     }
+
     // move name
-    playerName.setX(this_player.sprite.x - this_player.sprite.width / 2);
-    playerName.setY(this_player.sprite.y - this_player.sprite.height);
+    playerName.setX(this_player.getX() - this_player.sprite.width / 2);
+    playerName.setY(this_player.getY() - this_player.sprite.height);
 
     if(pressed)
     {
         if(this_player.sprite.anims.isPaused)
             this_player.sprite.anims.play('walk');
-        socket.emit('move player', {id: this_player.id, x: this_player.sprite.x, y: this_player.sprite.y, angle: this_player.sprite.angle });
+        socket.emit('move player', {id: this_player.getId(), x: this_player.getX(), y: this_player.getY(), angle: this_player.getAngle() });
     } else {
         if (!this_player.sprite.anims.isPaused)
         {
             this_player.sprite.anims.pause();
-            socket.emit('stop player', {id: this_player.id, x: this_player.sprite.x, y: this_player.sprite.y, angle: this_player.sprite.angle });
+            socket.emit('stop player', {id: this_player.getId(), x: this_player.getX(), y: this_player.getY(), angle: this_player.getAngle() });
         }
     }
 };
@@ -134,9 +135,9 @@ function setEventHandlers () {
     var gameScene = this;
     socket.on('connect player', (data)=>{
         console.log('Player ' + data.id + ' Connected to socket server');
-        this_player.id = data.id;
+        this_player.setId(data.id);
         playerLst.push(this_player);
-        socket.emit('boardcast player', { id: data.id, x: this_player.x, y: this_player.y, angle: this_player.angle });
+        socket.emit('boardcast player', { id: data.id, x: this_player.getX(), y: this_player.getY(), angle: this_player.getAngle() });
     });
     
     // Loading other players
@@ -150,7 +151,7 @@ function setEventHandlers () {
         chairLst.push(newChair);
         // add collider for your player and all chairs
         this_player.game.physics.add.collider(this_player.sprite, newChair.sprite, (player, chair)=> {
-            console.log("Grab a chair: " + chair.id);
+            console.log(`${player.id} grab a chair: ${chair.id}`);
             socket.emit('remove chair', {id: chair.id});
         });
     });
@@ -175,7 +176,7 @@ function setEventHandlers () {
     socket.on('new player', (data)=>{
         console.log('New player connected:', data.id);
         // adding other player
-        if(data.id != this_player.id) {
+        if(data.id != this_player.getId()) {
             var newPlayer = new Player(this_player.game, data.id, data.x, data.y, data.angle);
             playerLst.push(newPlayer);
         }
@@ -206,7 +207,7 @@ function setEventHandlers () {
 
 function findPlayerInPlayerLst(find_id) {
     for(var i = 0; i < playerLst.length; i++) {
-        if(playerLst[i].id == find_id) {
+        if(playerLst[i].getId() == find_id) {
             return playerLst[i];
         }
     }
@@ -215,7 +216,7 @@ function findPlayerInPlayerLst(find_id) {
 
 function removePlayerInPlayerLst(find_id) {
     for(var i = 0; i < playerLst.length; i++) {
-        if(playerLst[i].id == find_id) {
+        if(playerLst[i].getId() == find_id) {
             playerLst[i].sprite.destroy();
             playerLst.splice(i, 1);
             return true;
@@ -235,7 +236,7 @@ function findChairInChairLst(find_id) {
 
 function removeChairInChairLst(find_id) {
     for(var i = 0; i < chairLst.length; i++) {
-        if(chairLst[i].sprite.id == find_id) {
+        if(chairLst[i].getId() == find_id) {
             chairLst[i].sprite.destroy();
             chairLst.splice(i, 1);
             return true;

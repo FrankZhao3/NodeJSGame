@@ -50,11 +50,6 @@ io.on('connection', (socket) => {
     io.to(socket.id).emit('load chairs', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle});
   });
 
-  // socket.on('chat message', (msg) => {
-  //   io.emit('chat message', "some msg");
-  //   console.log('msg: ' + msg);
-  // });
-
   socket.on('boardcast player', (data) => {
     console.log('boardcast player: ' + data.id);
     console.log(data.x + " " + data.y + " " + data.angle);
