@@ -19,3 +19,5 @@ playButton.onclick = () => {
   }
 };
 
+//For testing purpose only
+// startGame('frank');

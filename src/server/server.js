@@ -3,6 +3,9 @@ const socketio = require('socket.io');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 const config = require('../../webpack.dev.config.js');
+var arraySort = require('array-sort');
+var jsonify = require('jsonify');
+
 
 // Setup an Express server
 const app = express();
@@ -26,25 +29,29 @@ console.log(`Server listening on port ${port}`);
 // Setup socket.io
 const io = socketio(server);
 const initChairNum = 15;
+const rewardPoint = 10;
 
 var playerPosLst = [];
 var chairPosLst = [];
+var scoreLst = [];
 
 // Listen for socket.io connections
 io.on('connection', (socket) => {
   console.log('Player connected!', socket.id);
-  io.to(socket.id).emit('connect player', {id: socket.id});
-  playerPosLst.forEach(elem => {
-    io.to(socket.id).emit('load players', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle}); //private reply
-  });
-  
+
   // init chair pos when the first player join in the game
-  if(chairPosLst.length == 0) {
+  if(chairPosLst.length == 0 && playerPosLst.length == 0) {
     // add chairs
     for(var i = 0; i < initChairNum; i++) {
       chairPosLst.push({id : i, x: Math.random() * 500 + 200, y: Math.random() * 500 + 200, angle: 0});  
     }
   }
+
+  io.to(socket.id).emit('connect player', {id: socket.id});
+  
+  playerPosLst.forEach(elem => {
+    io.to(socket.id).emit('load players', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle, name: elem.name}); //private reply
+  });
 
   chairPosLst.forEach(elem=> {
     io.to(socket.id).emit('load chairs', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle});
@@ -54,6 +61,7 @@ io.on('connection', (socket) => {
     console.log('boardcast player: ' + data.id);
     console.log(data.x + " " + data.y + " " + data.angle);
     playerPosLst.push({id: data.id, x:data.x, y:data.y, angle:data.angle});
+    scoreLst.push({id: data.id, score: 0, name: data.name});
     socket.broadcast.emit('new player', data);
   });
 
@@ -71,13 +79,19 @@ io.on('connection', (socket) => {
   socket.on('disconnect', ()=>{
     console.log('remove player', socket.id);
     removePlayerPosLst(socket.id);
+    removePlayerScore(socket.id);
     socket.broadcast.emit('disconnect player', {id: socket.id});
+    io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
   })
 
   socket.on('remove chair', (data)=>{
-    console.log('remove chair ' + data.id);
-    removeChairFromChairPosLst(data.id);
-    io.emit('remove chair', {id: data.id});
+    console.log('remove chair ' + data.chairId);
+    removeChairFromChairPosLst(data.chairId);
+    io.emit('remove chair', {id: data.chairId});
+    updateScore(data.playerId);
+    arraySort(scoreLst, 'score', {reverse: true});
+    console.log(scoreLst);
+    io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
   }); 
 });
 
@@ -106,6 +120,20 @@ function removeChairFromChairPosLst(chairId) {
   for(var i = 0; i < chairPosLst.length; i++) {
     if(chairPosLst[i].id == chairId) {
       chairPosLst.splice(i, 1);
+    }
+  }
+}
+function removePlayerScore(playerId) {
+  for(var i = 0; i < scoreLst.length; i++) {
+    if(scoreLst[i].id == playerId) {
+      scoreLst.splice(i, 1);
+    }
+  }
+}
+function updateScore(playerId) {
+  for(var i = 0; i < scoreLst.length; i++) {
+    if(scoreLst[i].id == playerId) {
+      scoreLst[i].score += rewardPoint;
     }
   }
 }

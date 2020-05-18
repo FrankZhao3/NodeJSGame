@@ -25,13 +25,17 @@ var config = {
     }
 };
 
+var jsonify = require('jsonify');
+var maxScoreDisplayNum = 3;
 var currentSpeed = 200;
+var chairPoint = 10;
 var land;
 var cursors;
 var playerLst = [];
 var chairLst = [];
-var this_player;
+var myPlayer;
 var playerName;
+var playerScore;
 var game;
 var socket;
 
@@ -78,10 +82,12 @@ function create() {
     // add a player to the game
     var startX = Math.round(Math.random() * (200) + 50);
     var startY = Math.round(Math.random() * (200) + 50);
-    this_player = new Player(this, null, startX, startY, 0);
-    var textX = Math.floor(this_player.sprite.x - this_player.sprite.width / 2);
-    var textY = Math.floor(this_player.sprite.y - this_player.sprite.height / 2);
+    myPlayer = new Player(this, null, startX, startY, 0, playerName);
+    var textX = Math.floor(myPlayer.sprite.x - myPlayer.sprite.width / 2);
+    var textY = Math.floor(myPlayer.sprite.y - myPlayer.sprite.height / 2);
     playerName = this.add.text(textX, textY, playerName);
+    playerScore = this.add.text(10, 10, `My score: ${myPlayer.getScore()}`);
+
     // add keys
     cursors = this.input.keyboard.addKeys({
         up: 'up',
@@ -111,38 +117,39 @@ function create() {
 
 function update() {
     // set collide
-    this_player.sprite.setVelocity(0);
+    myPlayer.sprite.setVelocity(0);
     var pressed = true;
     if (cursors.left.isDown) {
-        this_player.sprite.setVelocityX(-currentSpeed);
-        this_player.sprite.angle = 180;
+        myPlayer.sprite.setVelocityX(-currentSpeed);
+        myPlayer.sprite.angle = 180;
     } else if (cursors.right.isDown) {
-        this_player.sprite.setVelocityX(currentSpeed);
-        this_player.sprite.angle = 0;
+        myPlayer.sprite.setVelocityX(currentSpeed);
+        myPlayer.sprite.angle = 0;
     } else if (cursors.up.isDown) {
-        this_player.sprite.setVelocityY(-currentSpeed);
-        this_player.sprite.angle = -90;
+        myPlayer.sprite.setVelocityY(-currentSpeed);
+        myPlayer.sprite.angle = -90;
     } else if(cursors.down.isDown){
-        this_player.sprite.setVelocityY(currentSpeed);
-        this_player.sprite.angle = 90;
+        myPlayer.sprite.setVelocityY(currentSpeed);
+        myPlayer.sprite.angle = 90;
     } else {
         pressed = false;
     }
 
     // move name
-    playerName.setX(this_player.getX() - this_player.sprite.width / 2);
-    playerName.setY(this_player.getY() - this_player.sprite.height);
-
+    playerName.setX(myPlayer.getX() - myPlayer.sprite.width / 2);
+    playerName.setY(myPlayer.getY() - myPlayer.sprite.height);
+    
+    // Changing animation
     if(pressed)
     {
-        if(this_player.sprite.anims.isPaused)
-            this_player.sprite.anims.play('walk');
-        socket.emit('move player', {id: this_player.getId(), x: this_player.getX(), y: this_player.getY(), angle: this_player.getAngle() });
+        if(myPlayer.sprite.anims.isPaused)
+            myPlayer.sprite.anims.play('walk');
+        socket.emit('move player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
     } else {
-        if (!this_player.sprite.anims.isPaused)
+        if (!myPlayer.sprite.anims.isPaused)
         {
-            this_player.sprite.anims.pause();
-            socket.emit('stop player', {id: this_player.getId(), x: this_player.getX(), y: this_player.getY(), angle: this_player.getAngle() });
+            myPlayer.sprite.anims.pause();
+            socket.emit('stop player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
         }
     }
 };
@@ -152,24 +159,26 @@ function setEventHandlers () {
     var gameScene = this;
     socket.on('connect player', (data)=>{
         console.log('Player ' + data.id + ' Connected to socket server');
-        this_player.setId(data.id);
-        playerLst.push(this_player);
-        socket.emit('boardcast player', { id: data.id, x: this_player.getX(), y: this_player.getY(), angle: this_player.getAngle() });
+        myPlayer.setId(data.id);
+        playerLst.push(myPlayer);
+        socket.emit('boardcast player', { id: data.id, x: myPlayer.getX(), y: myPlayer.getY(), 
+                                        angle: myPlayer.getAngle(), name: myPlayer.getName()});
     });
     
     // Loading other players
     socket.on('load players', (data)=>{
-        var aNewPlayer = new Player(this_player.game, data.id, data.x, data.y, data.angle);
+        var aNewPlayer = new Player(myPlayer.game, data.id, data.x, data.y, data.angle, data.name);
         playerLst.push(aNewPlayer);
     });
     
     socket.on('load chairs', (data)=>{
-        var newChair = new Chair(this_player.game, data.id, data.x, data.y, data.angle);
+        var newChair = new Chair(myPlayer.game, data.id, data.x, data.y, data.angle);
         chairLst.push(newChair);
         // add collider for your player and all chairs
-        this_player.game.physics.add.collider(this_player.sprite, newChair.sprite, (player, chair)=> {
+        myPlayer.game.physics.add.collider(myPlayer.sprite, newChair.sprite, (player, chair)=> {
             console.log(`${player.id} grab a chair: ${chair.id}`);
-            socket.emit('remove chair', {id: chair.id});
+            socket.emit('remove chair', {chairId: chair.id, playerId: player.id, score: player.score});
+            player.score += chairPoint;
         });
     });
 
@@ -178,6 +187,15 @@ function setEventHandlers () {
         if(!chair) {
             console.log('chair not found');
         }
+    });
+
+    socket.on('update score', (data) => {     
+        var text = `My score: ${myPlayer.getScore()}\n` + `LeaderBoard\n`;
+        var scoreLst = jsonify.parse(data.scoreLst);
+        for(var i = 0; i < Math.min(scoreLst.length, maxScoreDisplayNum); i++) {
+            text += `${i + 1}.${scoreLst[i].name}:${scoreLst[i].score}\n`;
+        }
+        playerScore.setText(text);
     });
 
     // Socket disconnection
@@ -193,8 +211,8 @@ function setEventHandlers () {
     socket.on('new player', (data)=>{
         console.log('New player connected:', data.id);
         // adding other player
-        if(data.id != this_player.getId()) {
-            var newPlayer = new Player(this_player.game, data.id, data.x, data.y, data.angle);
+        if(data.id != myPlayer.getId()) {
+            var newPlayer = new Player(myPlayer.game, data.id, data.x, data.y, data.angle);
             playerLst.push(newPlayer);
         }
     });
