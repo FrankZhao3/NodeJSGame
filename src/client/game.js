@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import dudePic from '../assets/dude.png';
 import landPic from '../assets/light_grass.png';
 import chairPic from '../assets/chair.png';
-
+import fullscreen from '../assets/fullscreen.png'
 import {Player, Chair} from './gameObject.js';
 import io from 'socket.io-client'
 
@@ -14,6 +14,7 @@ var config = {
     width: 1000,
     height: 1000,
     backgroundColor: "#000000",
+    autoCenter: Phaser.Scale.CENTER_HORIZONTALLY,
     physics: {
         default: 'arcade'
     },
@@ -45,6 +46,7 @@ function preload() {
     this.load.spritesheet('dude', dudePic, {frameWidth:64, frameHeight:64});
     this.load.image('earth', landPic);
     this.load.image('chair', chairPic);
+    this.load.spritesheet('fullscreen', fullscreen, { frameWidth: 64, frameHeight: 64 });
 };
 
 function create() {
@@ -87,6 +89,21 @@ function create() {
         left: 'left',
         right: 'right'
     }); 
+
+    //set fullscreen mode
+    var button = this.add.image(1000 - 16, 16, 'fullscreen', 0).setOrigin(1, 0).setInteractive();
+
+    button.on('pointerup', function () {
+        if (this.scale.isFullscreen) {
+            button.setFrame(0);
+            this.scale.stopFullscreen();
+        }
+        else {
+            button.setFrame(1);
+            this.scale.startFullscreen();
+        }
+    }, this);
+
     // event handlers
     setEventHandlers();
 
