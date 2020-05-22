@@ -1,5 +1,5 @@
 export class Player {
-    constructor(game, id, x, y, angle) {
+    constructor(game, id, x, y, angle, name) {
         this.game = game;
         this.sprite = game.physics.add.sprite(x, y, 'dude' + id);
         this.sprite.id = id;
@@ -7,6 +7,8 @@ export class Player {
         this.game.physics.world.enable(this.sprite);
         this.sprite.body.setBounce(0.2).setCollideWorldBounds(true);
         this.sprite.anims.load('walk');
+        this.sprite.score = 0;
+        this.sprite.name = name;
     }
 
     // getter and setter
@@ -24,6 +26,22 @@ export class Player {
     
     setAngle(angle) {
         this.sprite.angle = angle;
+    }
+
+    setScore(score) {
+        this.sprite.score = score;
+    }
+
+    setName(name) {
+        this.sprite.name = name;
+    }
+
+    getName() {
+        return this.sprite.name;
+    }
+
+    getScore() {
+        return this.sprite.score;
     }
 
     getAngle() {
