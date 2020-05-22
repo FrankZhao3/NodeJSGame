@@ -132,7 +132,6 @@ function update() {
 
 function setEventHandlers () {
     // Socket connection successful
-    var gameScene = this;
     socket.on('connect player', (data)=>{
         console.log('Player ' + data.id + ' Connected to socket server');
         this_player.setId(data.id);

@@ -6,7 +6,6 @@ export class Player {
         this.sprite.angle = angle;
         this.game.physics.world.enable(this.sprite);
         this.sprite.body.setBounce(0.2).setCollideWorldBounds(true);
-        this.sprite.body.immovable = true;
         this.sprite.anims.load('walk');
     }
 
@@ -52,7 +51,6 @@ export class Chair {
         this.sprite.displayWidth = 50;
         this.sprite.scaleY = this.sprite.scaleX;
         this.sprite.body.setBounce(0.2).setCollideWorldBounds(true);
-        this.sprite.body.immovable = true;
     }
 
         // getter and setter
