@@ -104,6 +104,10 @@ io.on('connection', (socket) => {
     io.emit('remove block', {id: data.blockId});
   });
 
+  socket.on('add block', (data)=> {
+      blockLst.push({id: data.id, x : data.x, y: data.y, angle:0});
+      io.emit('add block', {id: data.id, x:data.x, y:data.y});
+  });
 });
 
 

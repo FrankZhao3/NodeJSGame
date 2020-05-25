@@ -141,14 +141,7 @@ function update() {
         }
         var value = getFaceDir(myPlayer.sprite.angle);
         if(cursors.space.isDown) {
-            let newBlock = new Block(myPlayer.game, blockLst.length, myPlayer.getX() + value[0], myPlayer.getY() + value[1], myPlayer.getAngle()); 
-            myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, (player, block)=> {
-                console.log(`${player.name} hit a block: ${block.id}`);
-                player.movable = false;
-                socket.emit('remove block', {blockId: block.id});
-                timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
-            });            
-            blockLst.push(newBlock);
+            socket.emit('add block', {id: blockLst.length, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});           
         } 
 
         // move name
@@ -206,18 +199,20 @@ function setEventHandlers () {
     });
 
     socket.on('load blocks', (data) => {
-        var dataLst = jsonify.parse(data);
+        let dataLst = jsonify.parse(data);
         dataLst.forEach(elem => {
             let newBlock = new Block(myPlayer.game, elem.id, elem.x, elem.y, elem.angle);
             blockLst.push(newBlock);
-            // add collider for your player and all chairs
-            myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, (player, block)=> {
-                console.log(`${player.name} hit a block: ${block.id}`);
-                player.movable = false;
-                socket.emit('remove block', {blockId: block.id});
-                timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
-            });
+            // add collider 
+            myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
         });
+    });
+
+    socket.on('add block', (data) => {
+        let newBlock = new Block(myPlayer.game, data.id, data.x, data.y, 0);
+        blockLst.push(newBlock);
+        // add collider
+        myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
     });
 
     socket.on('remove chair', (data) => {
@@ -354,4 +349,11 @@ function getFaceDir(angle) {
         default:
             return [0, 0]; 
     }
+}
+
+function onHitBlock(player, block) {
+    console.log(`${player.name} hit a block: ${block.id}`);
+    player.movable = false;
+    socket.emit('remove block', {blockId: block.id});
+    timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
 }
