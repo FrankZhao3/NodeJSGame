@@ -47,22 +47,13 @@ io.on('connection', (socket) => {
     for(var i = 0; i < initChairNum; i++) {
       chairPosLst.push({id : i, x: Math.random() * 500 + 200, y: Math.random() * 500 + 200, angle: 0});  
     }
-    // clear the rest of blocks
-    blockLst = [];
+
     for(var i = 0; i < initBlockNum; i++) {
       blockLst.push({id : i, x: Math.random() * 800 + 100, y: Math.random() * 800 + 100, angle: 0});
     }
   }
 
   io.to(socket.id).emit('connect player', {id: socket.id});
-  
-  // playerPosLst.forEach(elem => {
-  //   io.to(socket.id).emit('load players', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle, name: elem.name}); //private reply
-  // });
-
-  // chairPosLst.forEach(elem=> {
-  //   io.to(socket.id).emit('load chairs', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle});
-  // });
   io.to(socket.id).emit('load players', jsonify.stringify(playerPosLst));
   io.to(socket.id).emit('load chairs', jsonify.stringify(chairPosLst));
   io.to(socket.id).emit('load blocks', jsonify.stringify(blockLst));
@@ -90,6 +81,10 @@ io.on('connection', (socket) => {
     console.log('disconnecting player', socket.id);
     removePlayerPosLst(socket.id);
     removePlayerScore(socket.id);
+    if(playerPosLst.length == 0) {
+      chairPosLst = [];
+      blockLst = [];
+    }
     socket.broadcast.emit('disconnect player', {id: socket.id});
     io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
   })

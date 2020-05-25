@@ -38,12 +38,12 @@ var blockLst = [];
 var myPlayer;
 var playerName;
 var playerScore;
-var game;
 var socket;
+var timedEvent;
 
 export const startGame= (username)=>{
     console.log('initializing game for ' + username);
-    game = new Phaser.Game(config);
+    new Phaser.Game(config);
     playerName = username;
 };
 
@@ -96,7 +96,8 @@ function create() {
         up: 'up',
         down: 'down',
         left: 'left',
-        right: 'right'
+        right: 'right',
+        space: 'space'
     }); 
 
     //set fullscreen mode
@@ -121,38 +122,51 @@ function create() {
 function update() {
     // set collide
     myPlayer.sprite.setVelocity(0);
-    var pressed = true;
-    if (cursors.left.isDown) {
-        myPlayer.sprite.setVelocityX(-currentSpeed);
-        myPlayer.sprite.angle = 180;
-    } else if (cursors.right.isDown) {
-        myPlayer.sprite.setVelocityX(currentSpeed);
-        myPlayer.sprite.angle = 0;
-    } else if (cursors.up.isDown) {
-        myPlayer.sprite.setVelocityY(-currentSpeed);
-        myPlayer.sprite.angle = -90;
-    } else if(cursors.down.isDown){
-        myPlayer.sprite.setVelocityY(currentSpeed);
-        myPlayer.sprite.angle = 90;
-    } else {
-        pressed = false;
-    }
+    if(myPlayer.sprite.movable == true) {
+        var pressed = true;
+        if (cursors.left.isDown) {
+            myPlayer.sprite.setVelocityX(-currentSpeed);
+            myPlayer.sprite.angle = 180;
+        } else if (cursors.right.isDown) {
+            myPlayer.sprite.setVelocityX(currentSpeed);
+            myPlayer.sprite.angle = 0;
+        } else if (cursors.up.isDown) {
+            myPlayer.sprite.setVelocityY(-currentSpeed);
+            myPlayer.sprite.angle = -90;
+        } else if(cursors.down.isDown){
+            myPlayer.sprite.setVelocityY(currentSpeed);
+            myPlayer.sprite.angle = 90;
+        } else {
+            pressed = false;
+        }
+        var value = getFaceDir(myPlayer.sprite.angle);
+        if(cursors.space.isDown) {
+            let newBlock = new Block(myPlayer.game, blockLst.length, myPlayer.getX() + value[0], myPlayer.getY() + value[1], myPlayer.getAngle()); 
+            myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, (player, block)=> {
+                console.log(`${player.name} hit a block: ${block.id}`);
+                player.movable = false;
+                socket.emit('remove block', {blockId: block.id});
+                timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
+            });            
+            blockLst.push(newBlock);
+        } 
 
-    // move name
-    playerName.setX(myPlayer.getX() - myPlayer.sprite.width / 2);
-    playerName.setY(myPlayer.getY() - myPlayer.sprite.height);
-    
-    // Changing animation
-    if(pressed)
-    {
-        if(myPlayer.sprite.anims.isPaused)
-            myPlayer.sprite.anims.play('walk');
-        socket.emit('move player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
-    } else {
-        if (!myPlayer.sprite.anims.isPaused)
+        // move name
+        playerName.setX(myPlayer.getX() - myPlayer.sprite.width / 2);
+        playerName.setY(myPlayer.getY() - myPlayer.sprite.height);
+        
+        // Changing animation
+        if(pressed)
         {
-            myPlayer.sprite.anims.pause();
-            socket.emit('stop player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
+            if(myPlayer.sprite.anims.isPaused)
+                myPlayer.sprite.anims.play('walk');
+            socket.emit('move player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
+        } else {
+            if (!myPlayer.sprite.anims.isPaused)
+            {
+                myPlayer.sprite.anims.pause();
+                socket.emit('stop player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
+            }
         }
     }
 };
@@ -199,7 +213,9 @@ function setEventHandlers () {
             // add collider for your player and all chairs
             myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, (player, block)=> {
                 console.log(`${player.name} hit a block: ${block.id}`);
+                player.movable = false;
                 socket.emit('remove block', {blockId: block.id});
+                timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
             });
         });
     });
@@ -318,4 +334,24 @@ function removeBlockFromBlockLst(blockId) {
       }
     }
     return null;
+}
+
+function onEvent() {
+    console.log('trigger time event');
+    myPlayer.sprite.movable = true;
+}
+
+function getFaceDir(angle) {
+    switch(angle) {
+        case -180:
+            return [-70, 0];
+        case 0:
+            return [70, 0];
+        case -90:
+            return [0, -70];  
+        case 90:
+            return [0, 70];     
+        default:
+            return [0, 0]; 
+    }
 }

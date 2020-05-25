@@ -10,6 +10,7 @@ export class Player {
         this.sprite.anims.load('walk');
         this.sprite.score = 0;
         this.sprite.name = name;
+        this.sprite.movable = true;
     }
 
     // getter and setter
