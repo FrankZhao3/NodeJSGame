@@ -29,11 +29,13 @@ console.log(`Server listening on port ${port}`);
 // Setup socket.io
 const io = socketio(server);
 const initChairNum = 15;
+const initBlockNum = 10;
 const rewardPoint = 10;
 
 var playerPosLst = [];
 var chairPosLst = [];
 var scoreLst = [];
+var blockLst = [];
 
 // Listen for socket.io connections
 io.on('connection', (socket) => {
@@ -45,17 +47,16 @@ io.on('connection', (socket) => {
     for(var i = 0; i < initChairNum; i++) {
       chairPosLst.push({id : i, x: Math.random() * 500 + 200, y: Math.random() * 500 + 200, angle: 0});  
     }
+
+    for(var i = 0; i < initBlockNum; i++) {
+      blockLst.push({id : i, x: Math.random() * 800 + 100, y: Math.random() * 800 + 100, angle: 0});
+    }
   }
 
   io.to(socket.id).emit('connect player', {id: socket.id});
-  
-  playerPosLst.forEach(elem => {
-    io.to(socket.id).emit('load players', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle, name: elem.name}); //private reply
-  });
-
-  chairPosLst.forEach(elem=> {
-    io.to(socket.id).emit('load chairs', {id: elem.id, x: elem.x, y: elem.y, angle: elem.angle});
-  });
+  io.to(socket.id).emit('load players', jsonify.stringify(playerPosLst));
+  io.to(socket.id).emit('load chairs', jsonify.stringify(chairPosLst));
+  io.to(socket.id).emit('load blocks', jsonify.stringify(blockLst));
 
   socket.on('boardcast player', (data) => {
     console.log('boardcast player: ' + data.id);
@@ -66,33 +67,47 @@ io.on('connection', (socket) => {
   });
 
   socket.on('move player', (data)=>{
-    console.log('move player', data.id);
+    // console.log('move player', data.id);
     updatePlayerPosLst(data);
     socket.broadcast.emit('move player', data); // boardcast to other players to update location
   });
 
   socket.on('stop player', (data)=>{
-    console.log('stop player', data.id);
+    // console.log('stop player', data.id);
     socket.broadcast.emit('stop player', data);
   });
   
   socket.on('disconnect', ()=>{
-    console.log('remove player', socket.id);
+    console.log('disconnecting player', socket.id);
     removePlayerPosLst(socket.id);
     removePlayerScore(socket.id);
+    if(playerPosLst.length == 0) {
+      chairPosLst = [];
+      blockLst = [];
+    }
     socket.broadcast.emit('disconnect player', {id: socket.id});
     io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
   })
 
   socket.on('remove chair', (data)=>{
-    console.log('remove chair ' + data.chairId);
+    // console.log('remove chair ' + data.chairId);
     removeChairFromChairPosLst(data.chairId);
     io.emit('remove chair', {id: data.chairId});
     updateScore(data.playerId);
     arraySort(scoreLst, 'score', {reverse: true});
-    console.log(scoreLst);
     io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
   }); 
+
+  socket.on('remove block', (data)=>{
+    console.log('remove block ' + data.blockId);
+    removeBlockFromBlockLst(data.blockId);
+    io.emit('remove block', {id: data.blockId});
+  });
+
+  socket.on('add block', (data)=> {
+      blockLst.push({id: data.id, x : data.x, y: data.y, angle:0});
+      io.emit('add block', {id: data.id, x:data.x, y:data.y});
+  });
 });
 
 
@@ -123,6 +138,15 @@ function removeChairFromChairPosLst(chairId) {
     }
   }
 }
+
+function removeBlockFromBlockLst(blockId) {
+  for(var i = 0; i < blockLst.length; i++) {
+    if(blockLst[i].id == blockId) {
+      blockLst.splice(i, 1);
+    }
+  }
+}
+
 function removePlayerScore(playerId) {
   for(var i = 0; i < scoreLst.length; i++) {
     if(scoreLst[i].id == playerId) {

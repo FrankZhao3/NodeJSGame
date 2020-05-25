@@ -1,9 +1,10 @@
 import Phaser from "phaser";
 import dudePic from '../assets/dude.png';
 import landPic from '../assets/light_grass.png';
+import banana from '../assets/banana.png';
 import chairPic from '../assets/chair.png';
 import fullscreen from '../assets/fullscreen.png'
-import {Player, Chair} from './gameObject.js';
+import {Player, Chair, Block} from './gameObject.js';
 import io from 'socket.io-client'
 
 // Creating the game
@@ -33,15 +34,16 @@ var land;
 var cursors;
 var playerLst = [];
 var chairLst = [];
+var blockLst = [];
 var myPlayer;
 var playerName;
 var playerScore;
-var game;
 var socket;
+var timedEvent;
 
 export const startGame= (username)=>{
     console.log('initializing game for ' + username);
-    game = new Phaser.Game(config);
+    new Phaser.Game(config);
     playerName = username;
 };
 
@@ -50,6 +52,7 @@ function preload() {
     this.load.spritesheet('dude', dudePic, {frameWidth:64, frameHeight:64});
     this.load.image('earth', landPic);
     this.load.image('chair', chairPic);
+    this.load.image('block', banana);
     this.load.spritesheet('fullscreen', fullscreen, { frameWidth: 64, frameHeight: 64 });
 };
 
@@ -93,7 +96,8 @@ function create() {
         up: 'up',
         down: 'down',
         left: 'left',
-        right: 'right'
+        right: 'right',
+        space: 'space'
     }); 
 
     //set fullscreen mode
@@ -118,38 +122,47 @@ function create() {
 function update() {
     // set collide
     myPlayer.sprite.setVelocity(0);
-    var pressed = true;
-    if (cursors.left.isDown) {
-        myPlayer.sprite.setVelocityX(-currentSpeed);
-        myPlayer.sprite.angle = 180;
-    } else if (cursors.right.isDown) {
-        myPlayer.sprite.setVelocityX(currentSpeed);
-        myPlayer.sprite.angle = 0;
-    } else if (cursors.up.isDown) {
-        myPlayer.sprite.setVelocityY(-currentSpeed);
-        myPlayer.sprite.angle = -90;
-    } else if(cursors.down.isDown){
-        myPlayer.sprite.setVelocityY(currentSpeed);
-        myPlayer.sprite.angle = 90;
-    } else {
-        pressed = false;
-    }
+    if(myPlayer.sprite.movable == true) {
+        var pressed = true;
+        if (cursors.left.isDown) {
+            myPlayer.sprite.setVelocityX(-currentSpeed);
+            myPlayer.sprite.angle = 180;
+        } else if (cursors.right.isDown) {
+            myPlayer.sprite.setVelocityX(currentSpeed);
+            myPlayer.sprite.angle = 0;
+        } else if (cursors.up.isDown) {
+            myPlayer.sprite.setVelocityY(-currentSpeed);
+            myPlayer.sprite.angle = -90;
+        } else if(cursors.down.isDown){
+            myPlayer.sprite.setVelocityY(currentSpeed);
+            myPlayer.sprite.angle = 90;
+        } else {
+            pressed = false;
+        }
+        var value = getFaceDir(myPlayer.sprite.angle);
+        if(cursors.space.isDown && myPlayer.getBlockNum() > 0 && myPlayer.sprite.hasPower) {
+            socket.emit('add block', {id: blockLst.length, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
+            myPlayer.setBlockNum(myPlayer.getBlockNum() - 1);
+            timedEvent = myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
+            myPlayer.sprite.hasPower = false;       
+        } 
 
-    // move name
-    playerName.setX(myPlayer.getX() - myPlayer.sprite.width / 2);
-    playerName.setY(myPlayer.getY() - myPlayer.sprite.height);
-    
-    // Changing animation
-    if(pressed)
-    {
-        if(myPlayer.sprite.anims.isPaused)
-            myPlayer.sprite.anims.play('walk');
-        socket.emit('move player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
-    } else {
-        if (!myPlayer.sprite.anims.isPaused)
+        // move name
+        playerName.setX(myPlayer.getX() - myPlayer.sprite.width / 2);
+        playerName.setY(myPlayer.getY() - myPlayer.sprite.height);
+        
+        // Changing animation
+        if(pressed)
         {
-            myPlayer.sprite.anims.pause();
-            socket.emit('stop player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
+            if(myPlayer.sprite.anims.isPaused)
+                myPlayer.sprite.anims.play('walk');
+            socket.emit('move player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
+        } else {
+            if (!myPlayer.sprite.anims.isPaused)
+            {
+                myPlayer.sprite.anims.pause();
+                socket.emit('stop player', {id: myPlayer.getId(), x: myPlayer.getX(), y: myPlayer.getY(), angle: myPlayer.getAngle() });
+            }
         }
     }
 };
@@ -166,25 +179,55 @@ function setEventHandlers () {
     
     // Loading other players
     socket.on('load players', (data)=>{
-        var aNewPlayer = new Player(myPlayer.game, data.id, data.x, data.y, data.angle, data.name);
-        playerLst.push(aNewPlayer);
+        var dataLst = jsonify.parse(data);
+        dataLst.forEach(player => {
+            playerLst.push(new Player(myPlayer.game, player.id, player.x, player.y, player.angle, player.name));
+        })
     });
     
     socket.on('load chairs', (data)=>{
-        var newChair = new Chair(myPlayer.game, data.id, data.x, data.y, data.angle);
-        chairLst.push(newChair);
-        // add collider for your player and all chairs
-        myPlayer.game.physics.add.collider(myPlayer.sprite, newChair.sprite, (player, chair)=> {
-            console.log(`${player.id} grab a chair: ${chair.id}`);
-            socket.emit('remove chair', {chairId: chair.id, playerId: player.id, score: player.score});
-            player.score += chairPoint;
+        var dataLst = jsonify.parse(data);
+        dataLst.forEach(chair => {
+            let newChair = new Chair(myPlayer.game, chair.id, chair.x, chair.y, chair.angle);
+            chairLst.push(newChair);
+            // add collider for your player and all chairs
+            myPlayer.game.physics.add.collider(myPlayer.sprite, newChair.sprite, (player, chair)=> {
+                console.log(`${player.id} grab a chair: ${chair.id}`);
+                socket.emit('remove chair', {chairId: chair.id, playerId: player.id, score: player.score});
+                player.score += chairPoint;
+            });
         });
+    
+    });
+
+    socket.on('load blocks', (data) => {
+        let dataLst = jsonify.parse(data);
+        dataLst.forEach(elem => {
+            let newBlock = new Block(myPlayer.game, elem.id, elem.x, elem.y, elem.angle);
+            blockLst.push(newBlock);
+            // add collider 
+            myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
+        });
+    });
+
+    socket.on('add block', (data) => {
+        let newBlock = new Block(myPlayer.game, data.id, data.x, data.y, 0);
+        blockLst.push(newBlock);
+        // add collider
+        myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
     });
 
     socket.on('remove chair', (data) => {
         var chair = removeChairInChairLst(data.id);
         if(!chair) {
             console.log('chair not found');
+        }
+    });
+
+    socket.on('remove block', (data) => {
+        var block = removeBlockFromBlockLst(data.id);
+        if(!block) {
+            console.log('block not found');
         }
     });
 
@@ -277,4 +320,48 @@ function removeChairInChairLst(find_id) {
         }
     }
     return null;
+}
+
+function removeBlockFromBlockLst(blockId) {
+    for(var i = 0; i < blockLst.length; i++) {
+        if(blockLst[i].sprite.id == blockId) {
+            blockLst[i].sprite.destroy();
+            blockLst.splice(i, 1);
+            return true;
+      }
+    }
+    return null;
+}
+
+function onEvent() {
+    console.log('trigger time event');
+    myPlayer.sprite.movable = true;
+}
+
+function triggerAbility() {
+    console.log('trigger ability');
+    myPlayer.sprite.hasPower = true;
+}
+
+function getFaceDir(angle) {
+    switch(angle) {
+        case -180:
+            return [-70, 0];
+        case 0:
+            return [70, 0];
+        case -90:
+            return [0, -70];  
+        case 90:
+            return [0, 70];     
+        default:
+            return [0, 0]; 
+    }
+}
+
+function onHitBlock(player, block) {
+    console.log(`${player.name} hit a block: ${block.id}`);
+    player.movable = false;
+    socket.emit('remove block', {blockId: block.id});
+    timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
+    player.blockNum++;
 }

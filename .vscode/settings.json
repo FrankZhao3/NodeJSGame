@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.deploySubpath": "",
+    "appService.defaultWebAppToDeploy": "/subscriptions/3042bfac-eac4-41d0-abcb-b06e9900fe28/resourceGroups/appsvc_linux_centralus/providers/Microsoft.Web/sites/chair-game"
+}
