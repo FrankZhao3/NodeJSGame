@@ -140,8 +140,11 @@ function update() {
             pressed = false;
         }
         var value = getFaceDir(myPlayer.sprite.angle);
-        if(cursors.space.isDown) {
-            socket.emit('add block', {id: blockLst.length, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});           
+        if(cursors.space.isDown && myPlayer.getBlockNum() > 0 && myPlayer.sprite.hasPower) {
+            socket.emit('add block', {id: blockLst.length, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
+            myPlayer.setBlockNum(myPlayer.getBlockNum() - 1);
+            timedEvent = myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
+            myPlayer.sprite.hasPower = false;       
         } 
 
         // move name
@@ -336,6 +339,11 @@ function onEvent() {
     myPlayer.sprite.movable = true;
 }
 
+function triggerAbility() {
+    console.log('trigger ability');
+    myPlayer.sprite.hasPower = true;
+}
+
 function getFaceDir(angle) {
     switch(angle) {
         case -180:
@@ -356,4 +364,5 @@ function onHitBlock(player, block) {
     player.movable = false;
     socket.emit('remove block', {blockId: block.id});
     timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
+    player.blockNum++;
 }

@@ -11,6 +11,8 @@ export class Player {
         this.sprite.score = 0;
         this.sprite.name = name;
         this.sprite.movable = true;
+        this.sprite.blockNum = 10;
+        this.sprite.hasPower = true;
     }
 
     // getter and setter
@@ -36,6 +38,14 @@ export class Player {
 
     setName(name) {
         this.sprite.name = name;
+    }
+
+    setBlockNum(num) {
+        this.sprite.blockNum = num;
+    }
+
+    getBlockNum() {
+        return this.sprite.blockNum;
     }
 
     getName() {
