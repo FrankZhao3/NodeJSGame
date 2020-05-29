@@ -6,7 +6,7 @@ import chairPic from '../assets/chair.png';
 import fullscreen from '../assets/fullscreen.png'
 import {Player, Chair, Block} from './gameObject.js';
 import io from 'socket.io-client'
-
+import constant from '../shared/constant.js';
 // Creating the game
 
 //draw canvas
@@ -35,6 +35,7 @@ var cursors;
 var playerLst = [];
 var chairLst = [];
 var blockLst = [];
+var blockCount = constant.INIT_BLOCK_NUM;
 var myPlayer;
 var playerName;
 var playerScore;
@@ -58,7 +59,7 @@ function preload() {
 
 function create() {
     // set up socket
-    socket = io(`ws://${window.location.host}`);
+    socket = io(`/`);
     // walk anim
     var walkAnim = {
         key: 'walk',
@@ -141,7 +142,7 @@ function update() {
         }
         var value = getFaceDir(myPlayer.sprite.angle);
         if(cursors.space.isDown && myPlayer.getBlockNum() > 0 && myPlayer.sprite.hasPower) {
-            socket.emit('add block', {id: blockLst.length, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
+            socket.emit('add block', {id: blockCount++, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
             myPlayer.setBlockNum(myPlayer.getBlockNum() - 1);
             timedEvent = myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
             myPlayer.sprite.hasPower = false;       

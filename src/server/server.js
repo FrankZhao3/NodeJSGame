@@ -5,7 +5,7 @@ const webpackDevMiddleware = require('webpack-dev-middleware');
 const config = require('../../webpack.dev.config.js');
 var arraySort = require('array-sort');
 var jsonify = require('jsonify');
-
+var constant = require('../shared/constant.js');
 
 // Setup an Express server
 const app = express();
@@ -28,10 +28,6 @@ console.log(`Server listening on port ${port}`);
 
 // Setup socket.io
 const io = socketio(server);
-const initChairNum = 15;
-const initBlockNum = 10;
-const rewardPoint = 10;
-
 var playerPosLst = [];
 var chairPosLst = [];
 var scoreLst = [];
@@ -44,11 +40,11 @@ io.on('connection', (socket) => {
   // init chair pos when the first player join in the game
   if(chairPosLst.length == 0 && playerPosLst.length == 0) {
     // add chairs
-    for(var i = 0; i < initChairNum; i++) {
+    for(var i = 0; i < constant.INIT_CHAIR_NUM; i++) {
       chairPosLst.push({id : i, x: Math.random() * 500 + 200, y: Math.random() * 500 + 200, angle: 0});  
     }
 
-    for(var i = 0; i < initBlockNum; i++) {
+    for(var i = 0; i < constant.INIT_BLOCK_NUM; i++) {
       blockLst.push({id : i, x: Math.random() * 800 + 100, y: Math.random() * 800 + 100, angle: 0});
     }
   }
@@ -157,7 +153,7 @@ function removePlayerScore(playerId) {
 function updateScore(playerId) {
   for(var i = 0; i < scoreLst.length; i++) {
     if(scoreLst[i].id == playerId) {
-      scoreLst[i].score += rewardPoint;
+      scoreLst[i].score += constant.REWARD_POINT;
     }
   }
 }

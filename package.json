@@ -6,7 +6,7 @@
   "main": "src/server/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "develop": "cross-env NODE_ENV=development node src/server/server.js"
+    "start": "cross-env NODE_ENV=development node src/server/server.js"
   },
   "author": "",
   "license": "ISC",
