@@ -5,8 +5,8 @@
   "private": true,
   "main": "src/server/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "cross-env NODE_ENV=development node src/server/server.js"
+    "build": "cross-env NODE_ENV=development node src/server/server.js",
+    "test": "cross-env NODE_ENV=development node src/server/server.js"
   },
   "author": "",
   "license": "ISC",
