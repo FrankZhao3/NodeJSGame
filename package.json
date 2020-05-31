@@ -6,7 +6,7 @@
   "main": "src/server/server.js",
   "scripts": {
     "build": "cross-env NODE_ENV=development node src/server/server.js",
-    "test": "cross-env NODE_ENV=development node src/server/server.js"
+    "test": "jest"
   },
   "author": "",
   "license": "ISC",
@@ -31,6 +31,7 @@
     "babel-preset-es2015": "^6.24.1",
     "css-loader": "^3.5.3",
     "file-loader": "^6.0.0",
+    "jest": "^26.0.1",
     "ts-loader": "^7.0.1",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"
