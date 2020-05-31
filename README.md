@@ -1,6 +1,8 @@
 # NodeJSGame
 A game built using node js
 
-npm install & npm run develop
+npm install & 
+npm run build & 
+npm run test test
 
-Grabbing Chair Game 
+Running for Chair Game 
