@@ -28,6 +28,7 @@ console.log(`Server listening on port ${port}`);
 
 // Setup socket.io
 const io = socketio(server);
+var totalPlayerNum = 0;
 var playerPosLst = [];
 var chairPosLst = [];
 var scoreLst = [];
@@ -49,7 +50,7 @@ io.on('connection', (socket) => {
     }
   }
 
-  io.to(socket.id).emit('connect player', {id: socket.id});
+  io.to(socket.id).emit('connect player', {id: socket.id, playerCount: totalPlayerNum});
   io.to(socket.id).emit('load players', jsonify.stringify(playerPosLst));
   io.to(socket.id).emit('load chairs', jsonify.stringify(chairPosLst));
   io.to(socket.id).emit('load blocks', jsonify.stringify(blockLst));
@@ -60,6 +61,7 @@ io.on('connection', (socket) => {
     playerPosLst.push({id: data.id, x:data.x, y:data.y, angle:data.angle});
     scoreLst.push({id: data.id, score: 0, name: data.name});
     socket.broadcast.emit('new player', data);
+    totalPlayerNum++;
   });
 
   socket.on('move player', (data)=>{
@@ -75,7 +77,9 @@ io.on('connection', (socket) => {
   
   socket.on('disconnect', ()=>{
     console.log('disconnecting player', socket.id);
-    removePlayerPosLst(socket.id);
+    if(removePlayerPosLst(socket.id)) {
+      totalPlayerNum--;
+    }
     removePlayerScore(socket.id);
     if(playerPosLst.length == 0) {
       chairPosLst = [];
@@ -123,8 +127,10 @@ function removePlayerPosLst(removeId) {
   for(i = 0; i < playerPosLst.length; i++) {
       if(playerPosLst[i].id == removeId) {
         playerPosLst.splice(i, 1);
+        return true;
       }
   }
+  return false;
 }
 
 function removeChairFromChairPosLst(chairId) {

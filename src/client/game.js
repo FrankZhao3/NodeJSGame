@@ -36,14 +36,14 @@ var playerLst = [];
 var chairLst = [];
 var blockLst = [];
 var blockCount = constant.INIT_BLOCK_NUM;
-var myPlayer;
+var myPlayer = null;
 var playerName;
 var playerScore;
 var socket;
-var timedEvent;
+var game; 
 
 export const startGame= (username)=>{
-    console.log('initializing game for ' + username);
+    console.log('Initializing game for ' + username);
     new Phaser.Game(config);
     playerName = username;
 };
@@ -60,6 +60,8 @@ function preload() {
 function create() {
     // set up socket
     socket = io(`/`);
+    // set game
+    game = this;
     // walk anim
     var walkAnim = {
         key: 'walk',
@@ -83,23 +85,6 @@ function create() {
     land = this.add.tileSprite(0, 0, 2000, 2000, 'earth');
     land.fixedToCamera = true;
     this.physics.world.setBounds(0, 0, 950, 950);
-    // add a player to the game
-    var startX = Math.round(Math.random() * (200) + 50);
-    var startY = Math.round(Math.random() * (200) + 50);
-    myPlayer = new Player(this, null, startX, startY, 0, playerName);
-    var textX = Math.floor(myPlayer.sprite.x - myPlayer.sprite.width / 2);
-    var textY = Math.floor(myPlayer.sprite.y - myPlayer.sprite.height / 2);
-    playerName = this.add.text(textX, textY, playerName);
-    playerScore = this.add.text(10, 10, `My score: ${myPlayer.getScore()}`);
-
-    // add keys
-    cursors = this.input.keyboard.addKeys({
-        up: 'up',
-        down: 'down',
-        left: 'left',
-        right: 'right',
-        space: 'space'
-    }); 
 
     //set fullscreen mode
     var button = this.add.image(1000 - 16, 16, 'fullscreen', 0).setOrigin(1, 0).setInteractive();
@@ -122,8 +107,8 @@ function create() {
 
 function update() {
     // set collide
-    myPlayer.sprite.setVelocity(0);
-    if(myPlayer.sprite.movable == true) {
+    if(myPlayer && myPlayer.sprite.movable == true) {
+        myPlayer.sprite.setVelocity(0);
         var pressed = true;
         if (cursors.left.isDown) {
             myPlayer.sprite.setVelocityX(-currentSpeed);
@@ -144,7 +129,7 @@ function update() {
         if(cursors.space.isDown && myPlayer.getBlockNum() > 0 && myPlayer.sprite.hasPower) {
             socket.emit('add block', {id: blockCount++, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
             myPlayer.setBlockNum(myPlayer.getBlockNum() - 1);
-            timedEvent = myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
+            myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
             myPlayer.sprite.hasPower = false;       
         } 
 
@@ -172,31 +157,56 @@ function setEventHandlers () {
     // Socket connection successful
     socket.on('connect player', (data)=>{
         console.log('Player ' + data.id + ' Connected to socket server');
-        myPlayer.setId(data.id);
-        playerLst.push(myPlayer);
-        socket.emit('boardcast player', { id: data.id, x: myPlayer.getX(), y: myPlayer.getY(), 
-                                        angle: myPlayer.getAngle(), name: myPlayer.getName()});
+        if(data.playerCount < constant.MAX_PLAYER_NUM) {
+            // add player
+            var startX = Math.round(Math.random() * (200) + 50);
+            var startY = Math.round(Math.random() * (200) + 50);
+            myPlayer = new Player(game, null, startX, startY, 0, playerName);
+            var textX = Math.floor(myPlayer.sprite.x - myPlayer.sprite.width / 2);
+            var textY = Math.floor(myPlayer.sprite.y - myPlayer.sprite.height / 2);
+            playerName = game.add.text(textX, textY, playerName);
+            playerScore = game.add.text(10, 10, `My score: ${myPlayer.getScore()}`);
+                
+            // add keys
+            cursors = game.input.keyboard.addKeys({
+                up: 'up',
+                down: 'down',
+                left: 'left',
+                right: 'right',
+                space: 'space'
+            }); 
+        
+            myPlayer.setId(data.id);
+            playerLst.push(myPlayer);
+            socket.emit('boardcast player', { id: data.id, x: myPlayer.getX(), y: myPlayer.getY(), 
+                                            angle: myPlayer.getAngle(), name: myPlayer.getName()});
+        } else {
+            playerScore = game.add.text(10, 10, '');
+            alert("You are in watching mode");
+        }
     });
     
     // Loading other players
     socket.on('load players', (data)=>{
         var dataLst = jsonify.parse(data);
         dataLst.forEach(player => {
-            playerLst.push(new Player(myPlayer.game, player.id, player.x, player.y, player.angle, player.name));
+            playerLst.push(new Player(game, player.id, player.x, player.y, player.angle, player.name));
         })
     });
     
     socket.on('load chairs', (data)=>{
         var dataLst = jsonify.parse(data);
         dataLst.forEach(chair => {
-            let newChair = new Chair(myPlayer.game, chair.id, chair.x, chair.y, chair.angle);
+            let newChair = new Chair(game, chair.id, chair.x, chair.y, chair.angle);
             chairLst.push(newChair);
-            // add collider for your player and all chairs
-            myPlayer.game.physics.add.collider(myPlayer.sprite, newChair.sprite, (player, chair)=> {
-                console.log(`${player.id} grab a chair: ${chair.id}`);
-                socket.emit('remove chair', {chairId: chair.id, playerId: player.id, score: player.score});
-                player.score += chairPoint;
-            });
+            if(myPlayer) {
+                // add collider for your player and all chairs
+                myPlayer.game.physics.add.collider(myPlayer.sprite, newChair.sprite, (player, chair)=> {
+                    console.log(`${player.id} grab a chair: ${chair.id}`);
+                    socket.emit('remove chair', {chairId: chair.id, playerId: player.id, score: player.score});
+                    player.score += chairPoint;
+                });
+            }
         });
     
     });
@@ -204,10 +214,12 @@ function setEventHandlers () {
     socket.on('load blocks', (data) => {
         let dataLst = jsonify.parse(data);
         dataLst.forEach(elem => {
-            let newBlock = new Block(myPlayer.game, elem.id, elem.x, elem.y, elem.angle);
+            let newBlock = new Block(game, elem.id, elem.x, elem.y, elem.angle);
             blockLst.push(newBlock);
-            // add collider 
-            myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
+            if(myPlayer) {
+                // add collider 
+                myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
+            }
         });
     });
 
@@ -232,8 +244,13 @@ function setEventHandlers () {
         }
     });
 
-    socket.on('update score', (data) => {     
-        var text = `My score: ${myPlayer.getScore()}\n` + `LeaderBoard\n`;
+    socket.on('update score', (data) => {  
+        var text;
+        if(myPlayer) {   
+            text = `My score: ${myPlayer.getScore()}\n` + `LeaderBoard\n`;
+        } else {
+            text = `LeaderBoard\n`;
+        }
         var scoreLst = jsonify.parse(data.scoreLst);
         for(var i = 0; i < Math.min(scoreLst.length, maxScoreDisplayNum); i++) {
             text += `${i + 1}.${scoreLst[i].name}:${scoreLst[i].score}\n`;
@@ -363,6 +380,6 @@ function onHitBlock(player, block) {
     console.log(`${player.name} hit a block: ${block.id}`);
     player.movable = false;
     socket.emit('remove block', {blockId: block.id});
-    timedEvent = myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
+    myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
     player.blockNum++;
 }

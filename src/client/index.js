@@ -12,7 +12,9 @@ playButton.onclick = () => {
   // notify server to start the game
   if(usernameInput.value.length >= 3 && usernameInput.value.length <= 8) {
     startGame(usernameInput.value);
-    // playButton.classList.add('hidden');
+    // hide elements
+    playButton.style.display = 'none';
+    usernameInput.style.display = 'none';
   }
   else {
     alert(`Username must greater than 3 and less than 8`);

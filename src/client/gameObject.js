@@ -125,7 +125,7 @@ export class Block {
         this.sprite.id = id;
         this.sprite.displayWidth = 50;
         this.sprite.scaleY = this.sprite.scaleX;
-        this.sprite.body.setBounce(0.2).setCollideWorldBounds(true);
+        this.sprite.body.setBounce(0.2);
         this.sprite.body.immovable = true;
     }
         // getter and setter
