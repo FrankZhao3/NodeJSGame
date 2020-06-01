@@ -29,7 +29,7 @@ console.log(`Server listening on port ${port}`);
 // Setup socket.io
 const io = socketio(server);
 var totalPlayerNum = 0;
-var playerPosLst = [];
+var playerDataLst = [];
 var chairPosLst = [];
 var scoreLst = [];
 var blockLst = [];
@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
   console.log('Player connected!', socket.id);
 
   // init chair pos when the first player join in the game
-  if(chairPosLst.length == 0 && playerPosLst.length == 0) {
+  if(chairPosLst.length == 0 && playerDataLst.length == 0) {
     // add chairs
     for(var i = 0; i < constant.INIT_CHAIR_NUM; i++) {
       chairPosLst.push({id : i, x: Math.random() * 500 + 200, y: Math.random() * 500 + 200, angle: 0});  
@@ -51,14 +51,14 @@ io.on('connection', (socket) => {
   }
 
   io.to(socket.id).emit('connect player', {id: socket.id, playerCount: totalPlayerNum});
-  io.to(socket.id).emit('load players', jsonify.stringify(playerPosLst));
+  io.to(socket.id).emit('load players', jsonify.stringify(playerDataLst));
   io.to(socket.id).emit('load chairs', jsonify.stringify(chairPosLst));
   io.to(socket.id).emit('load blocks', jsonify.stringify(blockLst));
 
   socket.on('boardcast player', (data) => {
     console.log('boardcast player: ' + data.id);
     console.log(data.x + " " + data.y + " " + data.angle);
-    playerPosLst.push({id: data.id, x:data.x, y:data.y, angle:data.angle});
+    playerDataLst.push({id: data.id, x:data.x, y:data.y, angle:data.angle, name: data.name});
     scoreLst.push({id: data.id, score: 0, name: data.name});
     socket.broadcast.emit('new player', data);
     totalPlayerNum++;
@@ -81,7 +81,7 @@ io.on('connection', (socket) => {
       totalPlayerNum--;
     }
     removePlayerScore(socket.id);
-    if(playerPosLst.length == 0) {
+    if(playerDataLst.length == 0) {
       chairPosLst = [];
       blockLst = [];
     }
@@ -113,20 +113,20 @@ io.on('connection', (socket) => {
 
 function updatePlayerPosLst(data) {
   var i;
-  for(i = 0; i < playerPosLst.length; i++) {
-      if(playerPosLst[i].id == data.id) {
-          playerPosLst[i].x = data.x;
-          playerPosLst[i].y = data.y;
-          playerPosLst[i].angle = data.angle;
+  for(i = 0; i < playerDataLst.length; i++) {
+      if(playerDataLst[i].id == data.id) {
+          playerDataLst[i].x = data.x;
+          playerDataLst[i].y = data.y;
+          playerDataLst[i].angle = data.angle;
       }
   }
 };
 
 function removePlayerPosLst(removeId) {
   var i;
-  for(i = 0; i < playerPosLst.length; i++) {
-      if(playerPosLst[i].id == removeId) {
-        playerPosLst.splice(i, 1);
+  for(i = 0; i < playerDataLst.length; i++) {
+      if(playerDataLst[i].id == removeId) {
+        playerDataLst.splice(i, 1);
         return true;
       }
   }

@@ -35,9 +35,10 @@ var cursors;
 var playerLst = [];
 var chairLst = [];
 var blockLst = [];
+var playerNameDict = {};
+var playerName;
 var blockCount = constant.INIT_BLOCK_NUM;
 var myPlayer = null;
-var playerName;
 var playerScore;
 var socket;
 var game; 
@@ -107,35 +108,36 @@ function create() {
 
 function update() {
     // set collide
-    if(myPlayer && myPlayer.sprite.movable == true) {
+    if(myPlayer) {
         myPlayer.sprite.setVelocity(0);
         var pressed = true;
-        if (cursors.left.isDown) {
-            myPlayer.sprite.setVelocityX(-currentSpeed);
-            myPlayer.sprite.angle = 180;
-        } else if (cursors.right.isDown) {
-            myPlayer.sprite.setVelocityX(currentSpeed);
-            myPlayer.sprite.angle = 0;
-        } else if (cursors.up.isDown) {
-            myPlayer.sprite.setVelocityY(-currentSpeed);
-            myPlayer.sprite.angle = -90;
-        } else if(cursors.down.isDown){
-            myPlayer.sprite.setVelocityY(currentSpeed);
-            myPlayer.sprite.angle = 90;
-        } else {
-            pressed = false;
+        if(myPlayer.sprite.movable == true) {
+            if (cursors.left.isDown) {
+                myPlayer.sprite.setVelocityX(-currentSpeed);
+                myPlayer.sprite.angle = 180;
+            } else if (cursors.right.isDown) {
+                myPlayer.sprite.setVelocityX(currentSpeed);
+                myPlayer.sprite.angle = 0;
+            } else if (cursors.up.isDown) {
+                myPlayer.sprite.setVelocityY(-currentSpeed);
+                myPlayer.sprite.angle = -90;
+            } else if(cursors.down.isDown){
+                myPlayer.sprite.setVelocityY(currentSpeed);
+                myPlayer.sprite.angle = 90;
+            } else {
+                pressed = false;
+            }
+            var value = getFaceDir(myPlayer.sprite.angle);
+            if(cursors.space.isDown && myPlayer.getBlockNum() > 0 && myPlayer.sprite.hasPower) {
+                socket.emit('add block', {id: blockCount++, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
+                myPlayer.setBlockNum(myPlayer.getBlockNum() - 1);
+                myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
+                myPlayer.sprite.hasPower = false;       
+            } 
         }
-        var value = getFaceDir(myPlayer.sprite.angle);
-        if(cursors.space.isDown && myPlayer.getBlockNum() > 0 && myPlayer.sprite.hasPower) {
-            socket.emit('add block', {id: blockCount++, x : myPlayer.getX() + value[0], y: myPlayer.getY() + value[1]});
-            myPlayer.setBlockNum(myPlayer.getBlockNum() - 1);
-            myPlayer.game.time.delayedCall(500, triggerAbility, [], myPlayer.game);    
-            myPlayer.sprite.hasPower = false;       
-        } 
 
         // move name
-        playerName.setX(myPlayer.getX() - myPlayer.sprite.width / 2);
-        playerName.setY(myPlayer.getY() - myPlayer.sprite.height);
+        moveText(playerNameDict[playerName], myPlayer);
         
         // Changing animation
         if(pressed)
@@ -164,7 +166,7 @@ function setEventHandlers () {
             myPlayer = new Player(game, null, startX, startY, 0, playerName);
             var textX = Math.floor(myPlayer.sprite.x - myPlayer.sprite.width / 2);
             var textY = Math.floor(myPlayer.sprite.y - myPlayer.sprite.height / 2);
-            playerName = game.add.text(textX, textY, playerName);
+            playerNameDict[playerName] = game.add.text(textX, textY, playerName);
             playerScore = game.add.text(10, 10, `My score: ${myPlayer.getScore()}`);
                 
             // add keys
@@ -190,7 +192,10 @@ function setEventHandlers () {
     socket.on('load players', (data)=>{
         var dataLst = jsonify.parse(data);
         dataLst.forEach(player => {
-            playerLst.push(new Player(game, player.id, player.x, player.y, player.angle, player.name));
+            let newPlayer = new Player(game, player.id, player.x, player.y, player.angle, player.name);
+            playerLst.push(newPlayer);            
+            playerNameDict[player.name] = game.add.text(player.x, player.y, player.name);
+            moveText(playerNameDict[player.name], newPlayer);
         })
     });
     
@@ -261,8 +266,12 @@ function setEventHandlers () {
     // Socket disconnection
     socket.on('disconnect player', (data)=>{
         console.log('Remove player:', data.id);
-        var removedPlayer = removePlayerInPlayerLst(data.id);
-        if(!removedPlayer) {
+        var player = findPlayerInPlayerLst();
+        if(player) {
+            playerNameDict[player.getName()].destroy();
+            playerNameDict[player.getName()] = null;
+            removePlayerInPlayerLst(data.id);
+        } else {
             console.log('player not found');
         }
     });
@@ -272,8 +281,10 @@ function setEventHandlers () {
         console.log('New player connected:', data.id);
         // adding other player
         if(data.id != myPlayer.getId()) {
-            var newPlayer = new Player(myPlayer.game, data.id, data.x, data.y, data.angle);
+            var newPlayer = new Player(myPlayer.game, data.id, data.x, data.y, data.angle, data.name);
             playerLst.push(newPlayer);
+            playerNameDict[data.name] = game.add.text(data.x, data.y, data.name);
+            moveText(playerNameDict[data.name], newPlayer);
         }
     });
   
@@ -288,6 +299,8 @@ function setEventHandlers () {
         movePlayer.sprite.x = data.x;
         movePlayer.sprite.y = data.y;
         movePlayer.sprite.angle = data.angle;
+
+        moveText(playerNameDict[movePlayer.getName()], movePlayer);
 
         if(movePlayer.sprite.anims.isPaused)
             movePlayer.sprite.anims.play('walk');
@@ -379,7 +392,13 @@ function getFaceDir(angle) {
 function onHitBlock(player, block) {
     console.log(`${player.name} hit a block: ${block.id}`);
     player.movable = false;
+    player.setVelocity(0);
     socket.emit('remove block', {blockId: block.id});
     myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
     player.blockNum++;
+}
+
+function moveText(playerName, player) {
+    playerName.setX(player.getX() - player.sprite.width / 2);
+    playerName.setY(player.getY() - player.sprite.height);
 }

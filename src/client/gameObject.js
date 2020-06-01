@@ -9,6 +9,7 @@ export class Player {
         this.sprite.anims.load('walk');
         this.sprite.score = 0;
         this.sprite.name = name;
+        this.sprite.body.immovable = true;
         this.sprite.movable = true;
         this.sprite.blockNum = 10;
         this.sprite.hasPower = true;
@@ -80,6 +81,7 @@ export class Chair {
         this.sprite.displayWidth = 50;
         this.sprite.scaleY = this.sprite.scaleX;
         this.sprite.body.setBounce(0.2).setCollideWorldBounds(true);
+        this.sprite.body.immovable = true;
     }
 
         // getter and setter
