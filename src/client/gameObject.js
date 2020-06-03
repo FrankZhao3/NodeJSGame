@@ -10,7 +10,7 @@ export class Player {
         this.sprite.score = 0;
         this.sprite.name = name;
         this.sprite.body.immovable = true;
-        this.sprite.movable = true;
+        this.sprite.movable = false;
         this.sprite.blockNum = 10;
         this.sprite.hasPower = true;
     }
@@ -70,6 +70,11 @@ export class Player {
     getY() {
         return this.sprite.y;
     }
+
+    clear() {
+        this.game = null;
+        this.sprite.destroy();
+    }
 }
 
 export class Chair {
@@ -117,6 +122,10 @@ export class Chair {
         getY() {
             return this.sprite.y;
         }
+
+        clear() {
+            this.sprite.destroy();
+        }
 }
 
 export class Block {
@@ -163,5 +172,8 @@ export class Block {
         getY() {
             return this.sprite.y;
         }
-
+        
+        clear() {
+            this.sprite.destroy();
+        }
 }

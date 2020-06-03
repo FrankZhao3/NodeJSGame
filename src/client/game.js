@@ -29,7 +29,6 @@ var config = {
 var jsonify = require('jsonify');
 var maxScoreDisplayNum = 3;
 var currentSpeed = 200;
-var chairPoint = 10;
 var land;
 var cursors;
 var playerLst = [];
@@ -42,6 +41,9 @@ var myPlayer = null;
 var playerScore;
 var socket;
 var game; 
+var timeText;
+var remainingTime;
+var timeInterval;
 
 export const startGame= (username)=>{
     console.log('Initializing game for ' + username);
@@ -83,7 +85,7 @@ function create() {
     this.anims.create(stopAnim);
 
   // Our tiled scrolling background
-    land = this.add.tileSprite(0, 0, 2000, 2000, 'earth');
+    land = this.add.tileSprite(0, 0, constant.WIDTH, constant.HEIGHT, 'earth');
     land.fixedToCamera = true;
     this.physics.world.setBounds(0, 0, 950, 950);
 
@@ -100,7 +102,9 @@ function create() {
             this.scale.startFullscreen();
         }
     }, this);
-
+    // set timer
+    remainingTime = constant.TOTAL_TIME;
+    timeText = this.add.text(350, 10, `Waiting for players...Time remain:${remainingTime}s`);
     // event handlers
     setEventHandlers();
 
@@ -209,7 +213,6 @@ function setEventHandlers () {
                 myPlayer.game.physics.add.collider(myPlayer.sprite, newChair.sprite, (player, chair)=> {
                     console.log(`${player.id} grab a chair: ${chair.id}`);
                     socket.emit('remove chair', {chairId: chair.id, playerId: player.id, score: player.score});
-                    player.score += chairPoint;
                 });
             }
         });
@@ -226,6 +229,11 @@ function setEventHandlers () {
                 myPlayer.game.physics.add.collider(myPlayer.sprite, newBlock.sprite, onHitBlock);
             }
         });
+    });
+
+    socket.on('start game', () => {
+        myPlayer.sprite.movable = true;
+        timeInterval = setInterval(updateTime, 1000); // counting down time
     });
 
     socket.on('add block', (data) => {
@@ -250,6 +258,9 @@ function setEventHandlers () {
     });
 
     socket.on('update score', (data) => {  
+        if(data.playerId == myPlayer.getId()) {
+            myPlayer.setScore(data.score);
+        }
         var text;
         if(myPlayer) {   
             text = `My score: ${myPlayer.getScore()}\n` + `LeaderBoard\n`;
@@ -266,7 +277,7 @@ function setEventHandlers () {
     // Socket disconnection
     socket.on('disconnect player', (data)=>{
         console.log('Remove player:', data.id);
-        var player = findPlayerInPlayerLst();
+        var player = findPlayerInPlayerLst(data.id);
         if(player) {
             playerNameDict[player.getName()].destroy();
             playerNameDict[player.getName()] = null;
@@ -333,15 +344,6 @@ function removePlayerInPlayerLst(find_id) {
     return null;
 };
 
-function findChairInChairLst(find_id) {
-    for(var i = 0; i < chairLst.length; i++) {
-        if(chairLst[i].id == find_id) {
-            return chairLst[i];
-        }
-    }
-    return null;
-}
-
 function removeChairInChairLst(find_id) {
     for(var i = 0; i < chairLst.length; i++) {
         if(chairLst[i].getId() == find_id) {
@@ -392,8 +394,7 @@ function getFaceDir(angle) {
 function onHitBlock(player, block) {
     console.log(`${player.name} hit a block: ${block.id}`);
     player.movable = false;
-    player.setVelocity(0);
-    socket.emit('remove block', {blockId: block.id});
+    socket.emit('remove block', {playerId: player.id, blockId: block.id});
     myPlayer.game.time.delayedCall(3000, onEvent, [], myPlayer.game);
     player.blockNum++;
 }
@@ -401,4 +402,40 @@ function onHitBlock(player, block) {
 function moveText(playerName, player) {
     playerName.setX(player.getX() - player.sprite.width / 2);
     playerName.setY(player.getY() - player.sprite.height);
+}
+
+function updateTime() {
+    remainingTime -= 1;
+    timeText.setText(`Time remain:${remainingTime}s`);
+    timeText.setX(400);
+    if(remainingTime == 0) {
+        clearInterval(timeInterval);
+        clearGameObjects();
+    }
+}
+
+function clearGameObjects() {
+    // removing game objects from scene
+    playerLst.forEach(elem=>{
+        elem.clear();
+    });
+
+    chairLst.forEach(elem=>{
+        elem.clear();
+    });
+
+    blockLst.forEach(elem=>{
+        elem.clear();
+    });
+    
+    for(var key in playerNameDict) {
+        var text = playerNameDict[key]
+        if(text) text.destroy();
+    }
+
+    playerNameDict = null;
+    myPlayer = null;
+    playerScore.setX(400);
+    playerScore.setY(400);
+    socket.emit('game over');
 }

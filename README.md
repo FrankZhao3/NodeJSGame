@@ -2,7 +2,7 @@
 A game built using node js
 
 npm install & 
-npm run build & 
-npm run test test
+npm run start & 
+npm run test
 
 Running for Chair Game 

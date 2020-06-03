@@ -62,16 +62,19 @@ io.on('connection', (socket) => {
     scoreLst.push({id: data.id, score: 0, name: data.name});
     socket.broadcast.emit('new player', data);
     totalPlayerNum++;
+    if(totalPlayerNum >= constant.MAX_PLAYER_NUM) {
+      console.log('start game');
+      io.emit('start game', {});
+    }
+
   });
 
   socket.on('move player', (data)=>{
-    // console.log('move player', data.id);
     updatePlayerPosLst(data);
     socket.broadcast.emit('move player', data); // boardcast to other players to update location
   });
 
   socket.on('stop player', (data)=>{
-    // console.log('stop player', data.id);
     socket.broadcast.emit('stop player', data);
   });
   
@@ -87,20 +90,22 @@ io.on('connection', (socket) => {
     }
     socket.broadcast.emit('disconnect player', {id: socket.id});
     io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
-  })
+  });
 
   socket.on('remove chair', (data)=>{
-    // console.log('remove chair ' + data.chairId);
     removeChairFromChairPosLst(data.chairId);
     io.emit('remove chair', {id: data.chairId});
-    updateScore(data.playerId);
+    let newScore = updateScore(data.playerId, constant.REWARD_POINT);
     arraySort(scoreLst, 'score', {reverse: true});
-    io.emit('update score', {scoreLst: jsonify.stringify(scoreLst)});
+    io.emit('update score', {scoreLst: jsonify.stringify(scoreLst), playerId: data.playerId, score: newScore});
   }); 
 
   socket.on('remove block', (data)=>{
     console.log('remove block ' + data.blockId);
+    let newScore = updateScore(data.playerId, constant.PENALTY_POINT)
     removeBlockFromBlockLst(data.blockId);
+    arraySort(scoreLst, 'score', {reverse: true});
+    io.emit('update score', {scoreLst: jsonify.stringify(scoreLst), playerId: data.playerId, score: newScore});
     io.emit('remove block', {id: data.blockId});
   });
 
@@ -108,6 +113,15 @@ io.on('connection', (socket) => {
       blockLst.push({id: data.id, x : data.x, y: data.y, angle:0});
       io.emit('add block', {id: data.id, x:data.x, y:data.y});
   });
+
+  socket.on('game over', ()=>{
+    totalPlayerNum = 0;
+    playerDataLst = [];
+    chairPosLst = [];
+    scoreLst = [];
+    blockLst = [];
+  });
+  
 });
 
 
@@ -156,10 +170,13 @@ function removePlayerScore(playerId) {
     }
   }
 }
-function updateScore(playerId) {
+
+function updateScore(playerId, score) {
   for(var i = 0; i < scoreLst.length; i++) {
     if(scoreLst[i].id == playerId) {
-      scoreLst[i].score += constant.REWARD_POINT;
+      scoreLst[i].score += score;
+      return scoreLst[i].score;
     }
   }
+  return 0;
 }
