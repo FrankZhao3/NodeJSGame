@@ -1,0 +1,23 @@
+.sample-header {
+    position: relative;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background-image: url("../assets/mountain.jpg");
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    font-family: arial;
+}
+
+.button {
+    position: relative;
+    background-color: bisque;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+  }
