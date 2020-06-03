@@ -1,23 +1,17 @@
 .sample-header {
-    position: relative;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background-image: url("../assets/mountain.jpg");
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    font-family: arial;
+    color: white;
+    text-align: center;
+    font-size: 150%;
 }
 
-.button {
-    position: relative;
-    background-color: bisque;
-    border: none;
-    color: white;
-    padding: 15px 32px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-  }
+
+.vertical-center {
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 45%;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+}
+
+  body {background-color: black;}

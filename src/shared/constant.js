@@ -6,5 +6,9 @@ module.exports = {
     REWARD_POINT: 10,
     MAX_PLAYER_NUM: 2,
     PENALTY_POINT: -5,
-    TOTAL_TIME: 120
+    TOTAL_TIME: 120,
+    FIRST_POSITION: {X: 50, Y:50},
+    SECOND_POSITION: {X: 50, Y:50},
+    THIRD_POSITION: {X: 50, Y:50},
+    FIRST_POSITION: {X: 50, Y:50}
 }
