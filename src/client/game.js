@@ -27,7 +27,6 @@ var config = {
 };
 
 var jsonify = require('jsonify');
-var maxScoreDisplayNum = 3;
 var currentSpeed = 200;
 var land;
 var cursors;
@@ -165,8 +164,9 @@ function setEventHandlers () {
         console.log('Player ' + data.id + ' Connected to socket server');
         if(data.playerCount < constant.MAX_PLAYER_NUM) {
             // add player
-            var startX = Math.round(Math.random() * (200) + 50);
-            var startY = Math.round(Math.random() * (200) + 50);
+            var startX = constant.PLAYER_POSITION[data.playerCount].X;
+            var startY = constant.PLAYER_POSITION[data.playerCount].Y;
+
             myPlayer = new Player(game, null, startX, startY, 0, playerName);
             var textX = Math.floor(myPlayer.sprite.x - myPlayer.sprite.width / 2);
             var textY = Math.floor(myPlayer.sprite.y - myPlayer.sprite.height / 2);
@@ -268,7 +268,7 @@ function setEventHandlers () {
             text = `LeaderBoard\n`;
         }
         var scoreLst = jsonify.parse(data.scoreLst);
-        for(var i = 0; i < Math.min(scoreLst.length, maxScoreDisplayNum); i++) {
+        for(var i = 0; i < Math.min(scoreLst.length, constant.MAX_LEADERBOARD_LENGTH); i++) {
             text += `${i + 1}.${scoreLst[i].name}:${scoreLst[i].score}\n`;
         }
         playerScore.setText(text);

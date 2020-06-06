@@ -7,8 +7,6 @@ module.exports = {
     MAX_PLAYER_NUM: 6,
     PENALTY_POINT: -5,
     TOTAL_TIME: 120,
-    FIRST_POSITION: {X: 50, Y:50},
-    SECOND_POSITION: {X: 50, Y:50},
-    THIRD_POSITION: {X: 50, Y:50},
-    FIRST_POSITION: {X: 50, Y:50}
+    PLAYER_POSITION: [{X: 50, Y:100}, {X: 50, Y: 400}, {X: 50, Y:800}, {X: 950, Y: 100}, {X: 950, Y: 400}, {X:950, Y:800}],
+    MAX_LEADERBOARD_LENGTH: 6
 }
