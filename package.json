@@ -14,7 +14,7 @@
     "array-sort": "^1.0.0",
     "bootstrap": "^4.5.0",
     "cross-env": "^7.0.2",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "jsonify": "0.0.0",
     "lodash": "^4.17.21",
     "nan": "^2.14.1",
